@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unblocked Website Runner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #siteFrame {
+            height: calc(100vh - 200px);
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-blue-600">Unblocked Website Runner</h1>
+            <p class="text-gray-600 mt-2">Access websites through our secure proxy</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="url" id="urlInput" placeholder="https://example.com" 
+                       class="flex-grow px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="loadBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    Load Site
+                </button>
+                <button id="clearBtn" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                    Clear
+                </button>
+            </div>
+            <div class="mt-4 flex items-center gap-2 text-sm text-gray-500">
+                <input type="checkbox" id="enableJS" class="mr-1" checked>
+                <label for="enableJS">Enable JavaScript</label>
+            </div>
+        </div>
+
+        <div class="relative">
+            <div id="loader" class="hidden absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-50">
+                <div class="loader"></div>
+            </div>
+            <iframe id="siteFrame" class="w-full bg-white" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
+        </div>
+
+        <div class="mt-6 bg-white rounded-lg shadow-md p-4">
+            <h2 class="text-lg font-semibold mb-2">Popular Unblocked Sites</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <button class="site-btn px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm" data-url="https://www.wikipedia.org">Wikipedia</button>
+                <button class="site-btn px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm" data-url="https://archive.org">Archive.org</button>
+                <button class="site-btn px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm" data-url="https://www.khanacademy.org">Khan Academy</button>
+                <button class="site-btn px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 text-sm" data-url="https://www.coolmathgames.com">Cool Math</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlInput = document.getElementById('urlInput');
+            const loadBtn = document.getElementById('loadBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const siteFrame = document.getElementById('siteFrame');
+            const loader = document.getElementById('loader');
+            const enableJS = document.getElementById('enableJS');
+            const siteButtons = document.querySelectorAll('.site-btn');
+
+            // Proxy server endpoint (using a free CORS proxy)
+            const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+
+            loadBtn.addEventListener('click', loadWebsite);
+            clearBtn.addEventListener('click', clearFrame);
+            urlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') loadWebsite();
+            });
+
+            siteButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    urlInput.value = btn.dataset.url;
+                    loadWebsite();
+                });
+            });
+
+            function loadWebsite() {
+                let url = urlInput.value.trim();
+                if (!url) return;
+
+                // Add https:// if missing
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                    urlInput.value = url;
+                }
+
+                loader.classList.remove('hidden');
+                siteFrame.style.display = 'none';
+
+                // Configure sandbox based on JS setting
+                const sandboxAttrs = ['allow-same-origin', 'allow-forms'];
+                if (enableJS.checked) {
+                    sandboxAttrs.push('allow-scripts', 'allow-popups', 'allow-modals');
+                }
+                siteFrame.sandbox = sandboxAttrs.join(' ');
+
+                // Use proxy for the request
+                const proxyUrl = PROXY_URL + url;
+                
+                fetch(proxyUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch');
+                    return response.text();
+                })
+                .then(html => {
+                    // Create a new document in the iframe
+                    const frameDoc = siteFrame.contentDocument || siteFrame.contentWindow.document;
+                    frameDoc.open();
+                    frameDoc.write(html);
+                    frameDoc.close();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load website. It may be blocked or the URL is invalid.');
+                })
+                .finally(() => {
+                    loader.classList.add('hidden');
+                    siteFrame.style.display = 'block';
+                });
+            }
+
+            function clearFrame() {
+                urlInput.value = '';
+                const frameDoc = siteFrame.contentDocument || siteFrame.contentWindow.document;
+                frameDoc.open();
+                frameDoc.write('<html><body style="background:white;display:flex;justify-content:center;align-items:center;height:100%;"><p>Enter a URL above to load a website</p></body></html>');
+                frameDoc.close();
+            }
+
+            // Initialize with blank iframe
+            clearFrame();
+        });
+    </script>
+</body>
+</html>
