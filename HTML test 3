@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chromebook Web Proxy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gradient-to-br from-blue-900 to-purple-800 min-h-screen">
+    <div class="container mx-auto px-4 py-16">
+        <div class="max-w-2xl mx-auto bg-white/10 backdrop-blur-md rounded-xl shadow-2xl overflow-hidden">
+            <div class="p-8">
+                <h1 class="text-3xl font-bold text-white mb-2">School Web Proxy</h1>
+                <p class="text-blue-200 mb-6">Access educational resources securely</p>
+                
+                <div class="flex gap-4 mb-6">
+                    <input type="url" id="target-url" 
+                           class="flex-1 px-4 py-3 rounded-lg bg-white/20 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                           placeholder="https://example.com">
+                    <button id="unblock-btn" 
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors">
+                        <i class="fas fa-unlock mr-2"></i> Connect
+                    </button>
+                </div>
+
+                <div id="status" class="hidden mb-6 p-4 bg-blue-900/50 rounded-lg text-blue-100"></div>
+                
+                <div id="result-container" class="hidden">
+                    <iframe id="unblocked-content" class="w-full h-96 rounded-lg border-2 border-white/20" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('unblock-btn').addEventListener('click', async () => {
+            const url = document.getElementById('target-url').value.trim();
+            if (!url) return;
+            
+            const status = document.getElementById('status');
+            const result = document.getElementById('result-container');
+            
+            status.classList.remove('hidden');
+            status.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Connecting to educational resource...`;
+            result.classList.add('hidden');
+            
+            try {
+                // Using educational-focused proxy endpoints
+                const proxyEndpoints = [
+                    'https://cors-anywhere.herokuapp.com/',
+                    'https://proxy.cors.sh/',
+                    'https://api.allorigins.win/get?url='
+                ];
+                
+                let response;
+                for (const endpoint of proxyEndpoints) {
+                    try {
+                        response = await fetch(`${endpoint}${encodeURIComponent(url)}`);
+                        if (response.ok) break;
+                    } catch (e) {
+                        continue;
+                    }
+                }
+                
+                if (!response || !response.ok) throw new Error('All proxy endpoints failed');
+                
+                const data = await (proxyEndpoints[2] ? response.json() : response.text());
+                const content = proxyEndpoints[2] ? data.contents : data;
+                
+                const iframe = document.getElementById('unblocked-content');
+                iframe.srcdoc = content || '<h1>Educational content loaded</h1>';
+                
+                status.innerHTML = `<i class="fas fa-check-circle mr-2"></i> Connected successfully`;
+                result.classList.remove('hidden');
+                
+            } catch (error) {
+                status.innerHTML = `<i class="fas fa-times-circle mr-2"></i> Error: ${error.message}`;
+                console.error('Proxy error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
